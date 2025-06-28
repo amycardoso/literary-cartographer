@@ -5,7 +5,6 @@ import com.amycardoso.literarycartographer.model.LocationTimeAnalysis;
 import com.amycardoso.literarycartographer.model.NominatimResponse;
 import com.amycardoso.literarycartographer.model.OpenLibraryResponse;
 import com.amycardoso.literarycartographer.model.OpenLibraryBookDetails;
-import com.amycardoso.literarycartographer.model.NominatimResponse;
 
 import java.util.Map;
 
