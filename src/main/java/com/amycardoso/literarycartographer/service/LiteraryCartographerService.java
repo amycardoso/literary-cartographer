@@ -2,7 +2,10 @@ package com.amycardoso.literarycartographer.service;
 
 import com.amycardoso.literarycartographer.model.BookDoc;
 import com.amycardoso.literarycartographer.model.LocationTimeAnalysis;
+import com.amycardoso.literarycartographer.model.NominatimResponse;
 import com.amycardoso.literarycartographer.model.OpenLibraryResponse;
+import com.amycardoso.literarycartographer.model.OpenLibraryBookDetails;
+import com.amycardoso.literarycartographer.model.NominatimResponse;
 
 import java.util.Map;
 
@@ -20,10 +23,12 @@ public class LiteraryCartographerService {
     private Resource locationTimePromptResource;
 
     private final OpenLibraryClient openLibraryClient;
+    private final NominatimClient nominatimClient;
     private final ChatClient chatClient;
 
-    public LiteraryCartographerService(ChatClient.Builder chatClientBuilder, OpenLibraryClient openLibraryClient) {
+    public LiteraryCartographerService(ChatClient.Builder chatClientBuilder, OpenLibraryClient openLibraryClient, NominatimClient nominatimClient) {
         this.openLibraryClient = openLibraryClient;
+        this.nominatimClient = nominatimClient;
         this.chatClient = chatClientBuilder.build();
     }
 
@@ -36,6 +41,20 @@ public class LiteraryCartographerService {
         String description = book.firstSentence() != null ? book.firstSentence() : "No description available.";
         String author = (book.authorName() != null && !book.authorName().isEmpty()) ?
                 book.authorName().get(0) : "Unknown";
+
+        // Fetch full book details for description and subjects
+        OpenLibraryBookDetails bookDetails = openLibraryClient.getBookDetails(book.key().replace("/works/", ""));
+        if (bookDetails != null && bookDetails.description() != null) {
+            if (bookDetails.description() instanceof String) {
+                description = (String) bookDetails.description();
+            } else if (bookDetails.description() instanceof java.util.Map) {
+                // Handle cases where description is an object with a 'value' field
+                Object value = ((java.util.Map) bookDetails.description()).get("value");
+                if (value instanceof String) {
+                    description = (String) value;
+                }
+            }
+        }
 
         BeanOutputConverter<LocationTimeAnalysis> converter = new BeanOutputConverter<>(LocationTimeAnalysis.class);
         PromptTemplate promptTemplate = new PromptTemplate(locationTimePromptResource);
@@ -66,12 +85,24 @@ public class LiteraryCartographerService {
             );
         }
 
+        // Geocode location if not fictional
+        Double latitude = aiResponse.latitude();
+        Double longitude = aiResponse.longitude();
+        if (aiResponse.location() != null && !aiResponse.fictional()) {
+            java.util.List<NominatimResponse> geocodeResponse = nominatimClient.geocode(aiResponse.location());
+            if (!geocodeResponse.isEmpty()) {
+                NominatimResponse firstResult = geocodeResponse.get(0);
+                latitude = firstResult.latitude();
+                longitude = firstResult.longitude();
+            }
+        }
+
         return new LocationTimeAnalysis(
             aiResponse.title() != null ? aiResponse.title() : title,
             aiResponse.author() != null ? aiResponse.author() : author,
             aiResponse.location(),
-            aiResponse.latitude(),
-            aiResponse.longitude(),
+            latitude,
+            longitude,
             aiResponse.timePeriod(),
             aiResponse.fictional(),
             aiResponse.basedOnRealWorld()

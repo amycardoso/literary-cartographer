@@ -1,6 +1,5 @@
 package com.amycardoso.literarycartographer.controller;
 
-import com.amycardoso.literarycartographer.model.BookAnalysis;
 import com.amycardoso.literarycartographer.model.LocationTimeAnalysis;
 import com.amycardoso.literarycartographer.service.LiteraryCartographerService;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,8 +18,8 @@ public class LiteraryCartographerController {
     }
 
     @GetMapping("/analyze")
-    public LocationTimeAnalysis analyzeBook(@RequestParam("title") String title) {
+    public LocationTimeAnalysis analyzeBook(@RequestParam String title) {
         return literaryCartographerService.analyzeBook(title);
     }
-    
+
 }

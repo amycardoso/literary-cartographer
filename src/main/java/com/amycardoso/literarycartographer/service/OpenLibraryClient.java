@@ -1,5 +1,6 @@
 package com.amycardoso.literarycartographer.service;
 
+import com.amycardoso.literarycartographer.model.OpenLibraryBookDetails;
 import com.amycardoso.literarycartographer.model.OpenLibraryResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Component;
@@ -29,6 +30,22 @@ public class OpenLibraryClient {
             return objectMapper.readValue(responseStr, OpenLibraryResponse.class);
         } catch (Exception e) {
             System.err.println("Error calling or parsing OpenLibrary API: " + e.getMessage());
+            return null;
+        }
+    }
+
+    public OpenLibraryBookDetails getBookDetails(String olId) {
+        try {
+            String responseStr = restClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/works/" + olId + ".json")
+                            .build())
+                    .retrieve()
+                    .body(String.class);
+            if (responseStr == null) return null;
+            return objectMapper.readValue(responseStr, OpenLibraryBookDetails.class);
+        } catch (Exception e) {
+            System.err.println("Error calling or parsing OpenLibrary API for book details: " + e.getMessage());
             return null;
         }
     }
