@@ -31,6 +31,8 @@ public class LiteraryCartographerService {
         this.chatClient = chatClientBuilder.build();
     }
 
+    private static final String systemMessage = "You are a literary analysis agent. Given a book description, extract the likely real-world location and time period where the story is set. If the story is set in a fictional world, state it clearly and provide a fictional reference instead.";
+
     public LocationTimeAnalysis analyzeBook(String title) {
         OpenLibraryResponse openLibraryResponse = openLibraryClient.searchByTitle(title);
         if (openLibraryResponse == null || openLibraryResponse.docs() == null || openLibraryResponse.docs().isEmpty()) {
@@ -66,6 +68,7 @@ public class LiteraryCartographerService {
                 ));
 
         LocationTimeAnalysis aiResponse = chatClient.prompt()
+                .system(systemMessage)
                 .user(userMessage)
                 .call()
                 .entity(LocationTimeAnalysis.class);
