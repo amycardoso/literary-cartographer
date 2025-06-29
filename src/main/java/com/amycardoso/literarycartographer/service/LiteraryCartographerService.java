@@ -8,6 +8,8 @@ import com.amycardoso.literarycartographer.model.OpenLibraryBookDetails;
 
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.converter.BeanOutputConverter;
@@ -15,8 +17,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
 
 @Service
 public class LiteraryCartographerService {
@@ -33,14 +34,17 @@ public class LiteraryCartographerService {
     public LiteraryCartographerService(ChatClient.Builder chatClientBuilder, OpenLibraryClient openLibraryClient, NominatimClient nominatimClient) {
         this.openLibraryClient = openLibraryClient;
         this.nominatimClient = nominatimClient;
-        this.chatClient = chatClientBuilder.build();
+        this.chatClient = chatClientBuilder
+                .build();
     }
 
-    /**
-     * Analyzes a book by title, extracting likely location and time period using AI and geocoding services.
-     * @param title The book title
-     * @return LocationTimeAnalysis result, or null if not found or error
-     */
+    private static final String SYSTEM_MESSAGE = """
+            You are a literary analysis agent. Your sole purpose is to analyze book descriptions to identify the story's setting.
+            Given the book's title, author, and description, extract the likely real-world location and time period.
+            If the story is set in a fictional world, state it clearly and provide a fictional reference instead.
+            Decline to answer any questions that are not related to this task.
+            """;
+
     public LocationTimeAnalysis analyzeBook(String title) {
         OpenLibraryResponse openLibraryResponse = openLibraryClient.searchByTitle(title);
         if (openLibraryResponse == null || openLibraryResponse.docs() == null || openLibraryResponse.docs().isEmpty()) {
@@ -67,7 +71,7 @@ public class LiteraryCartographerService {
         LocationTimeAnalysis aiResponse = null;
         try {
             aiResponse = chatClient.prompt()
-                    .system("You are a literary analysis agent. Given a book description, extract the likely real-world location and time period where the story is set. If the story is set in a fictional world, state it clearly and provide a fictional reference instead.")
+                    .system(SYSTEM_MESSAGE)
                     .user(userMessage)
                     .call()
                     .entity(LocationTimeAnalysis.class);
